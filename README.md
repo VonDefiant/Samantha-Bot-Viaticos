@@ -353,7 +353,9 @@ Este proyecto es de código abierto y está disponible bajo la licencia MIT.
 
 ## 👨‍💻 Autor
 
-Creado con ❤️ para facilitar el control de viáticos
+**Javier Gómez**
+
+Creado con ❤️ para facilitar el control de viáticos empresariales
 
 ## 🙏 Agradecimientos
 
