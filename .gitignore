@@ -1,0 +1,75 @@
+# Archivos de entorno
+.env
+.env.local
+.env.*.local
+
+# Base de datos
+*.db
+*.sqlite
+*.sqlite3
+viaticos.db
+
+# Archivos de Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+venv/
+ENV/
+env/
+.venv
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+logs/
+*.log
+
+# Facturas e imágenes
+facturas/*.jpg
+facturas/*.jpeg
+facturas/*.png
+facturas/*.pdf
+facturas/*.xlsx
+facturas/*.xls
+
+# Mantener carpetas vacías
+!facturas/.gitkeep
+!logs/.gitkeep
+
+# Archivos temporales
+*.tmp
+*.bak
+*.cache
+.pytest_cache/
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/

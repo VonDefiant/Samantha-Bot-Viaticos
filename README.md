@@ -1,254 +1,249 @@
-# 🤖 Samantha - Tu Asistente de Viáticos en Telegram
+# 🤖 Samantha - Bot de Viáticos
 
-Bot de Telegram con personalidad amigable que extrae automáticamente datos de facturas usando OCR y exporta a Excel con el formato de Research & Planning Guatemala.
+**Samantha** es tu asistente personal de viáticos para Telegram. Con personalidad cálida y humana, te ayuda a llevar un control ordenado de todas tus facturas usando OCR (reconocimiento óptico de caracteres) y generación automática de reportes Excel.
 
-**Samantha** es tu asistente personal que hace que llevar el control de viáticos sea fácil y hasta divertido. Solo enviá fotos de tus facturas y ella se encarga de todo lo demás 😊
+## ✨ Características
 
-## 📋 Características
+- 📸 **OCR Automático**: Solo envía la foto de tu factura y Samantha extrae todos los datos automáticamente
+- 💼 **Gestión Completa**: Registra, consulta, edita y elimina facturas fácilmente
+- 📊 **Reportes Excel**: Genera archivos Excel listos para tus reportes de viáticos
+- 🗄️ **Base de Datos SQLite**: Almacenamiento local seguro y confiable
+- 🔒 **Variables de Entorno**: Configuración segura con archivos .env
+- 📝 **Logging Completo**: Sistema de logs para seguimiento y depuración
+- 🏗️ **Arquitectura Modular**: Código organizado y fácil de mantener
 
-- ✅ Extracción automática de datos con OCR
-- ✅ Validación de NIT (excluye NIT de la empresa: 71224556)
-- ✅ Edición de datos antes de guardar
-- ✅ Categorías: ALIMENTACIÓN y COMBUSTIBLE
-- ✅ Exportación a Excel con formato específico
-- ✅ Base de datos SQLite local
-- ✅ Consultas y resúmenes
+## 🚀 Instalación
 
-## 🔧 Instalación
+### Requisitos Previos
 
-### 1. Instalar Tesseract OCR
+1. **Python 3.8 o superior**
+   - Descargar desde: https://www.python.org/downloads/
+   - **IMPORTANTE**: Durante la instalación, marca "Add Python to PATH"
 
-**En Windows:**
-- Descarga e instala desde: https://github.com/UB-Mannheim/tesseract/wiki
-- Agrega Tesseract al PATH del sistema
-- O especifica la ruta en el código:
-  ```python
-  pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
-  ```
+2. **Tesseract OCR**
+   - Descargar desde: https://github.com/UB-Mannheim/tesseract/wiki
+   - Después de instalar, agregar al PATH del sistema
+   - Ruta típica: `C:\Program Files\Tesseract-OCR`
 
-**En Linux (Ubuntu/Debian):**
-```bash
-sudo apt-get update
-sudo apt-get install tesseract-ocr
-sudo apt-get install tesseract-ocr-spa  # Idioma español
-```
+3. **Token de Telegram Bot**
+   - Abre Telegram y busca `@BotFather`
+   - Envía `/newbot` y sigue las instrucciones
+   - Guarda el TOKEN que te proporciona
 
-**En macOS:**
-```bash
-brew install tesseract
-brew install tesseract-lang  # Idiomas adicionales
-```
+### Instalación en Windows
 
-### 2. Instalar dependencias de Python
-
-```bash
-pip install -r requirements.txt
-```
-
-### 3. Crear el bot en Telegram
-
-1. Abre Telegram y busca: **@BotFather**
-2. Envía el comando: `/newbot`
-3. Sigue las instrucciones:
-   - Nombre del bot: `Control de Viáticos` (o el que quieras)
-   - Username: `mi_viaticos_bot` (debe terminar en "bot")
-4. Copia el **TOKEN** que te proporciona BotFather
-5. Pégalo en el archivo `bot_viaticos.py` en la línea:
-   ```python
-   TOKEN = 'TU_TOKEN_AQUI'  # <- Aquí pega tu token
+1. **Clonar o descargar el repositorio**
+   ```bash
+   git clone https://github.com/VonDefiant/Samantha-Bot-Viaticos.git
+   cd Samantha-Bot-Viaticos
    ```
 
-## 🚀 Ejecución
+2. **Ejecutar el instalador**
+   ```bash
+   install.bat
+   ```
+   Este script hará:
+   - Verificar Python
+   - Crear entorno virtual
+   - Instalar dependencias
+   - Verificar Tesseract
+   - Crear archivo `.env`
 
-```bash
-python bot_viaticos.py
-```
+3. **Configurar el TOKEN**
+   - Abre el archivo `.env` con un editor de texto
+   - Reemplaza `tu_token_aqui` con tu TOKEN de BotFather
+   ```env
+   TELEGRAM_TOKEN=123456789:ABCdefGHIjklMNOpqrsTUVwxyz
+   NIT_EMPRESA=71224556
+   ```
 
-Samantha te saludará con:
-```
-✨ Samantha está lista para ayudarte con tus viáticos!
-Presiona Ctrl+C para detener
-```
+4. **Iniciar el bot**
+   ```bash
+   start.bat
+   ```
 
-## 📱 Uso del Bot
+### Instalación en Linux/Mac
+
+1. **Clonar el repositorio**
+   ```bash
+   git clone https://github.com/VonDefiant/Samantha-Bot-Viaticos.git
+   cd Samantha-Bot-Viaticos
+   ```
+
+2. **Crear entorno virtual**
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate
+   ```
+
+3. **Instalar dependencias**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Instalar Tesseract**
+   ```bash
+   # Ubuntu/Debian
+   sudo apt-get install tesseract-ocr tesseract-ocr-spa
+
+   # macOS
+   brew install tesseract tesseract-lang
+   ```
+
+5. **Configurar .env**
+   ```bash
+   cp .env.example .env
+   nano .env  # Editar y agregar tu TOKEN
+   ```
+
+6. **Iniciar el bot**
+   ```bash
+   python main.py
+   ```
+
+## 📖 Uso
 
 ### Comandos Disponibles
 
-- `/start` - Iniciar el bot y ver comandos
-- `/nueva` - Registrar nueva factura
-- `/resumen` - Ver resumen de gastos
-- `/lista` - Ver últimas 20 facturas
-- `/exportar` - Exportar a Excel
-- `/borrar <id>` - Eliminar factura por ID
-- `/help` - Ayuda
+| Comando | Descripción |
+|---------|-------------|
+| `/start` | Inicia el bot y muestra el menú principal |
+| `/nueva` | Registra una nueva factura |
+| `/resumen` | Muestra resumen de gastos |
+| `/lista` | Lista las últimas 20 facturas |
+| `/exportar` | Genera y envía archivo Excel |
+| `/borrar <id>` | Elimina una factura por su ID |
+| `/help` | Muestra ayuda detallada |
+| `/cancelar` | Cancela la operación actual |
 
-### Flujo de Trabajo
+### Flujo de Registro de Factura
 
-1. **Envía** `/nueva`
-2. **Samantha te pregunta:** ¿Es ALIMENTACIÓN o COMBUSTIBLE?
-3. **Enviás** foto de la factura
-4. **Samantha lee** automáticamente todos los datos
-5. **Revisás** lo que encontró:
-   - 📅 Fecha (automática)
-   - 🏢 NIT Proveedor
-   - 👤 Nombre del Proveedor
-   - 🔢 Serie
-   - 📄 Número de Factura
-   - 💰 Monto
-6. **Confirmás** o **Editás** si algo no está correcto
-7. **¡Listo!** Samantha guarda tu factura con mucho cariño 😊
+1. Envía `/nueva`
+2. Selecciona tipo de gasto (Alimentación o Combustible)
+3. Envía la foto de la factura
+4. Samantha extrae los datos automáticamente
+5. Revisa los datos extraídos
+6. Edita si es necesario o confirma
+7. ¡Listo! Factura guardada
 
-### Exportar a Excel
+### Tips para Mejor OCR
 
-1. Envía `/exportar`
-2. El bot generará un archivo Excel con formato:
-   ```
-   viaticos_12_2025.xlsx
-   ```
-3. El archivo incluye:
-   - Headers del formato de R&P Guatemala
-   - Todas las facturas con sus datos
-   - Numeración automática
-   - Formato profesional
+- 📸 Toma la foto con buena iluminación
+- 📏 Mantén la factura plana y sin arrugas
+- 🔍 Asegúrate que el texto sea legible
+- ❌ Evita sombras y reflejos
+- ✅ Enfoca bien la cámara
 
-### Consultar Resumen
+## 🏗️ Estructura del Proyecto
 
 ```
-/resumen
+Samantha-Bot-Viaticos/
+│
+├── src/                      # Código fuente modular
+│   ├── __init__.py          # Inicialización del paquete
+│   ├── config.py            # Configuración y variables
+│   ├── database.py          # Gestión de base de datos
+│   ├── ocr.py               # Procesamiento OCR
+│   ├── excel_export.py      # Exportación a Excel
+│   ├── utils.py             # Utilidades y logging
+│   └── bot.py               # Lógica principal del bot
+│
+├── main.py                  # Punto de entrada
+├── requirements.txt         # Dependencias Python
+├── .env.example             # Ejemplo de configuración
+├── .gitignore              # Archivos ignorados por Git
+│
+├── install.bat             # Instalador para Windows
+├── start.bat               # Iniciador para Windows
+│
+├── facturas/               # Carpeta de facturas (git ignored)
+├── logs/                   # Carpeta de logs (git ignored)
+└── README.md              # Este archivo
 ```
 
-Muestra:
-- 💰 Total gastado
-- 📄 Cantidad de facturas
-- 🏷️ Desglose por tipo de gasto
+## 🔧 Configuración Avanzada
 
-### Eliminar Factura
+### Variables de Entorno (.env)
 
-```
-/borrar 5
-```
+```env
+# Token de Telegram Bot
+TELEGRAM_TOKEN=tu_token_aqui
 
-Elimina la factura con ID 5 (usa `/lista` para ver los IDs)
-
-## 📊 Estructura de Datos
-
-### Base de Datos (SQLite)
-
-Tabla `facturas`:
-- `id` - ID único
-- `fecha` - Fecha en formato DD/MM/YYYY
-- `nit_proveedor` - NIT del emisor de la factura
-- `nombre_proveedor` - Nombre del proveedor
-- `serie` - Serie de la factura
-- `numero` - Número de la factura
-- `tipo_gasto` - ALIMENTACIÓN o COMBUSTIBLE
-- `monto` - Monto en Quetzales
-- `foto_path` - Ruta de la foto guardada
-- `created_at` - Timestamp de creación
-
-### Formato de Excel
-
-Columnas exportadas:
-1. `No.` - Numeración automática
-2. `FECHA` - Fecha de la factura
-3. `NIT PROVEEDOR` - NIT del proveedor
-4. `SERIE` - Serie de la factura
-5. `No. COMPROBANTE` - Número de factura
-6. `TIPO DE GASTO` - ALIMENTACIÓN o COMBUSTIBLE
-7. `MONTO Q.` - Monto en Quetzales
-
-## 🔍 Validaciones
-
-El bot realiza las siguientes validaciones:
-
-1. ✅ **NIT**: No debe ser 71224556 (NIT de la empresa)
-2. ✅ **Tipo de Gasto**: Solo acepta ALIMENTACIÓN o COMBUSTIBLE
-3. ✅ **Monto**: Debe ser un número válido
-4. ✅ **Datos Editables**: Permite corregir cualquier campo
-
-## 📂 Estructura de Archivos
-
-```
-.
-├── bot_viaticos.py         # Código principal del bot
-├── requirements.txt        # Dependencias de Python
-├── README.md              # Este archivo
-├── viaticos.db            # Base de datos SQLite (se crea automáticamente)
-└── facturas/              # Carpeta con fotos y Excel (se crea automáticamente)
-    ├── factura_20251222_143052.jpg
-    ├── factura_20251222_150315.jpg
-    └── viaticos_12_2025.xlsx
+# NIT de tu empresa (para filtrar en OCR)
+NIT_EMPRESA=71224556
 ```
 
-## 🛠️ Personalización
+### Niveles de Logging
 
-### Cambiar NIT de la empresa
+Puedes ajustar el nivel de logging en `main.py`:
 
-En `bot_viaticos.py`, línea 22:
 ```python
-NIT_EMPRESA = '71224556'  # Cambia este valor
+configurar_logging(nivel=logging.DEBUG)  # DEBUG, INFO, WARNING, ERROR
 ```
 
-### Agregar más tipos de gasto
+## 🐛 Solución de Problemas
 
-Modifica la función `nueva_factura()`:
-```python
-keyboard = [['ALIMENTACIÓN', 'COMBUSTIBLE', 'HOSPEDAJE']]  # Agrega más
-```
+### El bot no inicia
 
-Y ajusta las validaciones en `recibir_categoria()`.
+1. Verifica que el archivo `.env` existe y contiene el TOKEN correcto
+2. Revisa los logs en la carpeta `logs/`
+3. Asegúrate que todas las dependencias están instaladas
 
-### Mejorar OCR
+### OCR no funciona
 
-Si el OCR no funciona bien, puedes:
-1. Mejorar la calidad de las fotos
-2. Ajustar los patrones regex en `extraer_datos_factura()`
-3. Usar una API de OCR más potente (Google Vision, AWS Textract)
+1. Verifica que Tesseract está instalado: `tesseract --version`
+2. Asegúrate que Tesseract está en el PATH del sistema
+3. Revisa que las fotos tengan buena calidad y iluminación
 
-## ⚠️ Troubleshooting
+### Error al generar Excel
 
-### Error: "Tesseract not found"
-- Asegúrate de tener Tesseract instalado
-- Verifica que esté en el PATH del sistema
-- O especifica la ruta manualmente en el código
+1. Verifica que la carpeta `facturas/` existe
+2. Asegúrate que tienes permisos de escritura
+3. Revisa los logs para ver el error específico
 
-### Error: "Invalid token"
-- Verifica que el TOKEN esté correcto
-- No debe tener espacios ni comillas extras
-- Debe ser el token completo de BotFather
+## 📝 Base de Datos
 
-### Error: "Permission denied" al guardar fotos
-- Asegúrate de tener permisos de escritura en la carpeta
-- El bot crea automáticamente la carpeta `facturas/`
+Samantha usa SQLite para almacenar las facturas. La base de datos se crea automáticamente en `viaticos.db`.
 
-### OCR extrae datos incorrectos
-- Toma fotos con buena iluminación
-- Asegúrate que el texto esté legible
-- Usa la opción "Editar" para corregir manualmente
+### Esquema de la tabla `facturas`:
 
-## 📞 Soporte
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| id | INTEGER | ID único (autoincremental) |
+| fecha | TEXT | Fecha de la factura |
+| nit_proveedor | TEXT | NIT del proveedor |
+| nombre_proveedor | TEXT | Nombre del proveedor |
+| serie | TEXT | Serie de la factura |
+| numero | TEXT | Número de la factura |
+| tipo_gasto | TEXT | ALIMENTACIÓN o COMBUSTIBLE |
+| monto | REAL | Monto en quetzales |
+| foto_path | TEXT | Ruta de la foto |
+| created_at | TEXT | Fecha de registro |
 
-Si tienes problemas:
-1. Revisa los logs en la consola
-2. Verifica que todas las dependencias estén instaladas
-3. Asegúrate que Tesseract esté funcionando: `tesseract --version`
+## 🤝 Contribuir
 
-## 📝 Notas
+Las contribuciones son bienvenidas. Para cambios importantes:
 
-- Las fotos se guardan en `facturas/`
-- La base de datos es local (`viaticos.db`)
-- Los datos no se comparten con terceros
-- Puedes hacer backup de `viaticos.db` para conservar tus datos
+1. Fork el repositorio
+2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
+3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
+4. Push a la rama (`git push origin feature/AmazingFeature`)
+5. Abre un Pull Request
 
-## 🎯 Próximas Mejoras
+## 📄 Licencia
 
-- [ ] Respaldo automático en Google Drive
-- [ ] Reportes por mes
-- [ ] Gráficas de gastos
-- [ ] Reconocimiento de proveedores frecuentes
-- [ ] Alertas de presupuesto
+Este proyecto es de código abierto y está disponible bajo la licencia MIT.
+
+## 👨‍💻 Autor
+
+Creado con ❤️ para facilitar el control de viáticos
+
+## 🙏 Agradecimientos
+
+- python-telegram-bot por la excelente biblioteca
+- Tesseract OCR por el motor de reconocimiento de texto
+- Todos los que contribuyan al proyecto
 
 ---
 
-**Desarrollado para Research & Planning Guatemala**
-Automatización de control de viáticos con Telegram Bot
+**¿Preguntas o problemas?** Abre un issue en GitHub o contacta al administrador.
