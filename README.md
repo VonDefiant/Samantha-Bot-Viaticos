@@ -1,130 +1,180 @@
-# 🤖 Samantha - Bot de Viáticos
+# 🤖 Samantha - Bot de Viáticos para Telegram
 
-**Samantha** es tu asistente personal de viáticos para Telegram. Con personalidad cálida y humana, te ayuda a llevar un control ordenado de todas tus facturas usando OCR (reconocimiento óptico de caracteres) y generación automática de reportes Excel.
+Bot inteligente de Telegram para el control y gestión de viáticos empresariales con capacidades de OCR (reconocimiento óptico de caracteres) para extraer datos automáticamente de fotografías de facturas.
 
 ## ✨ Características
 
-- 📸 **OCR Automático**: Solo envía la foto de tu factura y Samantha extrae todos los datos automáticamente
-- 💼 **Gestión Completa**: Registra, consulta, edita y elimina facturas fácilmente
-- 📊 **Reportes Excel**: Genera archivos Excel listos para tus reportes de viáticos
-- 🗄️ **Base de Datos SQLite**: Almacenamiento local seguro y confiable
-- 🔒 **Variables de Entorno**: Configuración segura con archivos .env
-- 📝 **Logging Completo**: Sistema de logs para seguimiento y depuración
-- 🏗️ **Arquitectura Modular**: Código organizado y fácil de mantener
+- 📸 **Extracción automática de datos** mediante OCR de Tesseract
+- 💾 **Almacenamiento en SQLite** de todas las facturas
+- 📊 **Exportación a Excel** con formato profesional
+- 🎯 **Interfaz intuitiva** con botones interactivos
+- 🔍 **Detección mejorada** de montos, series y datos de proveedores
+- 🖼️ **Preprocesamiento de imagen** para mejor precisión del OCR
+- 📝 **Edición manual** de datos si el OCR falla
+- 🔄 **Reintentar fotografía** sin perder el progreso
+- 🗑️ **Sistema mejorado de borrado** con ConversationHandler
+
+## 🖥️ Compatibilidad
+
+Compatible con:
+- ✅ Windows 10/11
+- ✅ Linux (Debian, Ubuntu, y derivados)
+- ✅ Oracle Cloud (y otros servicios cloud con Linux)
+
+## 📋 Requisitos
+
+### Windows
+- Python 3.8 o superior
+- Tesseract OCR (se puede instalar con el script)
+- Conexión a Internet
+
+### Linux (Debian/Ubuntu)
+- Python 3.8 o superior
+- Tesseract OCR (se instala automáticamente)
+- sudo (para instalación de dependencias del sistema)
+
+### Token de Telegram
+- Abre Telegram y busca `@BotFather`
+- Envía `/newbot` y sigue las instrucciones
+- Guarda el TOKEN que te proporciona
 
 ## 🚀 Instalación
 
-### Requisitos Previos
+### Windows
 
-1. **Python 3.8 o superior**
-   - Descargar desde: https://www.python.org/downloads/
-   - **IMPORTANTE**: Durante la instalación, marca "Add Python to PATH"
-
-2. **Tesseract OCR**
-   - Descargar desde: https://github.com/UB-Mannheim/tesseract/wiki
-   - Después de instalar, agregar al PATH del sistema
-   - Ruta típica: `C:\Program Files\Tesseract-OCR`
-
-3. **Token de Telegram Bot**
-   - Abre Telegram y busca `@BotFather`
-   - Envía `/newbot` y sigue las instrucciones
-   - Guarda el TOKEN que te proporciona
-
-### Instalación en Windows
-
-1. **Clonar o descargar el repositorio**
+1. **Descarga el proyecto:**
    ```bash
    git clone https://github.com/VonDefiant/Samantha-Bot-Viaticos.git
    cd Samantha-Bot-Viaticos
    ```
 
-2. **Ejecutar el instalador**
+2. **Ejecuta el instalador:**
    ```bash
    install.bat
    ```
-   Este script hará:
-   - Verificar Python
-   - Crear entorno virtual
-   - Instalar dependencias
-   - Verificar Tesseract
-   - Crear archivo `.env`
+   El instalador:
+   - Verifica Python
+   - Crea entorno virtual
+   - Instala dependencias
+   - Verifica Tesseract
+   - Crea archivo `.env`
 
-3. **Configurar el TOKEN**
-   - Abre el archivo `.env` con un editor de texto
-   - Reemplaza `tu_token_aqui` con tu TOKEN de BotFather
+3. **Configura tu token:**
+   - Edita el archivo `.env`
+   - Agrega tu token de Telegram Bot
    ```env
-   TELEGRAM_TOKEN=123456789:ABCdefGHIjklMNOpqrsTUVwxyz
+   TELEGRAM_TOKEN=tu_token_aqui
    NIT_EMPRESA=71224556
    ```
 
-4. **Iniciar el bot**
+4. **Inicia el bot:**
    ```bash
    start.bat
    ```
 
-### Instalación en Linux/Mac
+### Linux (Debian/Ubuntu/Oracle Cloud)
 
-1. **Clonar el repositorio**
+1. **Descarga el proyecto:**
    ```bash
    git clone https://github.com/VonDefiant/Samantha-Bot-Viaticos.git
    cd Samantha-Bot-Viaticos
    ```
 
-2. **Crear entorno virtual**
+2. **Da permisos a los scripts (si es necesario):**
    ```bash
-   python3 -m venv venv
-   source venv/bin/activate
+   chmod +x install.sh start.sh stop.sh run_background.sh
    ```
 
-3. **Instalar dependencias**
+3. **Ejecuta el instalador:**
    ```bash
-   pip install -r requirements.txt
+   ./install.sh
+   ```
+   El instalador:
+   - Verifica/instala Python 3
+   - Verifica/instala Tesseract OCR + español
+   - Crea entorno virtual
+   - Instala dependencias Python
+   - Crea archivo `.env`
+
+4. **Configura tu token:**
+   ```bash
+   nano .env
+   ```
+   Agrega tu token de Telegram Bot:
+   ```env
+   TELEGRAM_TOKEN=tu_token_aqui
+   NIT_EMPRESA=71224556
    ```
 
-4. **Instalar Tesseract**
-   ```bash
-   # Ubuntu/Debian
-   sudo apt-get install tesseract-ocr tesseract-ocr-spa
+## 🎮 Uso
 
-   # macOS
-   brew install tesseract tesseract-lang
-   ```
+### Windows
 
-5. **Configurar .env**
-   ```bash
-   cp .env.example .env
-   nano .env  # Editar y agregar tu TOKEN
-   ```
+**Iniciar el bot:**
+```bash
+start.bat
+```
 
-6. **Iniciar el bot**
-   ```bash
-   python main.py
-   ```
+**Detener el bot:**
+- Presiona `Ctrl+C` en la ventana del bot
+- O ejecuta: `kill_bot.bat`
 
-## 📖 Uso
+### Linux - Modo interactivo
 
-### Comandos Disponibles
+**Iniciar el bot:**
+```bash
+./start.sh
+```
 
-| Comando | Descripción |
-|---------|-------------|
-| `/start` | Inicia el bot y muestra el menú principal |
-| `/nueva` | Registra una nueva factura |
-| `/resumen` | Muestra resumen de gastos |
-| `/lista` | Lista las últimas 20 facturas |
-| `/exportar` | Genera y envía archivo Excel |
-| `/borrar <id>` | Elimina una factura por su ID |
-| `/help` | Muestra ayuda detallada |
-| `/cancelar` | Cancela la operación actual |
+**Detener el bot:**
+- Presiona `Ctrl+C`
+- O en otra terminal: `./stop.sh`
+
+### Linux - Modo background (para servidores)
+
+**Iniciar en segundo plano:**
+```bash
+./run_background.sh
+```
+
+**Ver logs en tiempo real:**
+```bash
+tail -f logs/bot_output.log
+```
+
+**Detener el bot:**
+```bash
+./stop.sh
+```
+
+## 📱 Comandos del Bot
+
+El bot usa botones interactivos, pero también soporta comandos:
+
+| Botón/Comando | Descripción |
+|---------------|-------------|
+| 📝 Nueva Factura / `/nueva` | Registrar nueva factura |
+| 📊 Resumen / `/resumen` | Ver resumen de gastos |
+| 📋 Ver Lista / `/lista` | Ver lista de facturas |
+| 📥 Exportar Excel / `/exportar` | Exportar a Excel |
+| 🗑️ Borrar Factura / `/borrar` | Eliminar una factura |
+| ❓ Ayuda / `/help` | Ver ayuda |
+| `/start` | Mostrar menú principal |
+| `/cancelar` | Cancelar operación actual |
 
 ### Flujo de Registro de Factura
 
-1. Envía `/nueva`
-2. Selecciona tipo de gasto (Alimentación o Combustible)
-3. Envía la foto de la factura
-4. Samantha extrae los datos automáticamente
+1. Presiona **📝 Nueva Factura**
+2. Selecciona tipo de gasto (🍔 Alimentación o ⛽ Combustible)
+3. Envía la foto de la factura 📸
+4. Samantha extrae los datos automáticamente 🔍
 5. Revisa los datos extraídos
-6. Edita si es necesario o confirma
-7. ¡Listo! Factura guardada
+6. Opciones disponibles:
+   - **✅ Aceptar**: Guardar la factura
+   - **📸 Reintentar Foto**: Tomar nueva foto
+   - **✏️ Editar**: Modificar los datos manualmente
+   - **❌ Cancelar**: Cancelar el proceso
+7. ¡Listo! Factura guardada 🎉
 
 ### Tips para Mejor OCR
 
@@ -133,8 +183,9 @@
 - 🔍 Asegúrate que el texto sea legible
 - ❌ Evita sombras y reflejos
 - ✅ Enfoca bien la cámara
+- 💡 Si el OCR falla, puedes reintentar la foto o editar manualmente
 
-## 🏗️ Estructura del Proyecto
+## 📂 Estructura del Proyecto
 
 ```
 Samantha-Bot-Viaticos/
@@ -142,64 +193,130 @@ Samantha-Bot-Viaticos/
 ├── src/                      # Código fuente modular
 │   ├── __init__.py          # Inicialización del paquete
 │   ├── config.py            # Configuración y variables
-│   ├── database.py          # Gestión de base de datos
-│   ├── ocr.py               # Procesamiento OCR
+│   ├── database.py          # Gestión de base de datos SQLite
+│   ├── ocr.py               # Procesamiento OCR mejorado
 │   ├── excel_export.py      # Exportación a Excel
 │   ├── utils.py             # Utilidades y logging
 │   └── bot.py               # Lógica principal del bot
 │
 ├── main.py                  # Punto de entrada
 ├── requirements.txt         # Dependencias Python
-├── .env.example             # Ejemplo de configuración
+├── .env.example             # Plantilla de configuración
+├── .env                     # Configuración (NO subir a git)
 ├── .gitignore              # Archivos ignorados por Git
 │
-├── install.bat             # Instalador para Windows
-├── start.bat               # Iniciador para Windows
+├── install.bat             # Instalador Windows
+├── start.bat               # Inicio Windows
+├── kill_bot.bat            # Detener Windows
 │
-├── facturas/               # Carpeta de facturas (git ignored)
-├── logs/                   # Carpeta de logs (git ignored)
-└── README.md              # Este archivo
+├── install.sh              # Instalador Linux
+├── start.sh                # Inicio Linux
+├── stop.sh                 # Detener Linux
+├── run_background.sh       # Inicio en background Linux
+│
+├── facturas/               # Imágenes y Excel (git ignored)
+├── logs/                   # Logs del bot (git ignored)
+├── viaticos.db             # Base de datos SQLite (git ignored)
+└── README.md               # Este archivo
 ```
 
-## 🔧 Configuración Avanzada
+## 🔧 Configuración en Oracle Cloud
 
-### Variables de Entorno (.env)
+Si vas a usar Oracle Cloud u otro servidor Linux:
 
-```env
-# Token de Telegram Bot
-TELEGRAM_TOKEN=tu_token_aqui
+1. **Conéctate a tu instancia:**
+   ```bash
+   ssh usuario@ip-del-servidor
+   ```
 
-# NIT de tu empresa (para filtrar en OCR)
-NIT_EMPRESA=71224556
-```
+2. **Instala git si no lo tienes:**
+   ```bash
+   sudo apt-get update
+   sudo apt-get install git
+   ```
 
-### Niveles de Logging
+3. **Clona el repositorio:**
+   ```bash
+   git clone https://github.com/VonDefiant/Samantha-Bot-Viaticos.git
+   cd Samantha-Bot-Viaticos
+   ```
 
-Puedes ajustar el nivel de logging en `main.py`:
+4. **Ejecuta la instalación:**
+   ```bash
+   chmod +x *.sh
+   ./install.sh
+   ```
 
-```python
-configurar_logging(nivel=logging.DEBUG)  # DEBUG, INFO, WARNING, ERROR
-```
+5. **Configura el token:**
+   ```bash
+   nano .env
+   ```
+
+6. **Inicia en modo background:**
+   ```bash
+   ./run_background.sh
+   ```
+
+7. **Verifica que está corriendo:**
+   ```bash
+   tail -f logs/bot_output.log
+   ```
+
+8. **Para desconectar sin detener el bot:**
+   - Presiona `Ctrl+C` para salir de tail
+   - Cierra la sesión SSH normalmente
+   - El bot seguirá corriendo en segundo plano
 
 ## 🐛 Solución de Problemas
 
-### El bot no inicia
+### Windows
 
-1. Verifica que el archivo `.env` existe y contiene el TOKEN correcto
+**Error: "Conflict: terminated by other getUpdates request"**
+- Ejecuta `kill_bot.bat`
+- O cierra todos los procesos de Python en el Administrador de Tareas
+
+**Error: "Tesseract not found"**
+- Descarga e instala Tesseract desde: https://github.com/UB-Mannheim/tesseract/wiki
+- Asegúrate de agregar Tesseract al PATH
+
+**El bot no inicia:**
+1. Verifica que `.env` existe y tiene el token correcto
 2. Revisa los logs en la carpeta `logs/`
-3. Asegúrate que todas las dependencias están instaladas
+3. Reinstala ejecutando `install.bat` nuevamente
 
-### OCR no funciona
+### Linux
 
-1. Verifica que Tesseract está instalado: `tesseract --version`
-2. Asegúrate que Tesseract está en el PATH del sistema
-3. Revisa que las fotos tengan buena calidad y iluminación
+**Error: "Permission denied"**
+```bash
+chmod +x install.sh start.sh stop.sh run_background.sh
+```
 
-### Error al generar Excel
+**El bot no inicia:**
+```bash
+# Ver logs
+cat logs/bot_output.log
 
-1. Verifica que la carpeta `facturas/` existe
-2. Asegúrate que tienes permisos de escritura
-3. Revisa los logs para ver el error específico
+# Verificar procesos
+ps aux | grep python
+
+# Verificar que tesseract está instalado
+tesseract --version
+```
+
+**Reinstalar Tesseract:**
+```bash
+sudo apt-get install --reinstall tesseract-ocr tesseract-ocr-spa
+```
+
+**Ver si el bot está corriendo:**
+```bash
+ps aux | grep "python.*main.py"
+```
+
+**OCR no funciona:**
+1. Verifica Tesseract: `tesseract --version`
+2. Verifica idioma español: `tesseract --list-langs | grep spa`
+3. Instala el paquete español si falta: `sudo apt-get install tesseract-ocr-spa`
 
 ## 📝 Base de Datos
 
