@@ -17,7 +17,7 @@ from openpyxl import load_workbook
 from openpyxl.styles import Font, Alignment, Border, Side
 
 # ==================== CONFIGURACIÓN ====================
-TOKEN = 'TU_TOKEN_AQUI'  # Reemplazar con tu token de BotFather
+TOKEN = '8228909123:AAEy0xFK9Ui1VtPRKBrammzeY-yT9hTwCB4'  # Reemplazar con tu token de BotFather
 NIT_EMPRESA = '71224556'  # NIT de Research & Planning Guatemala
 
 # Estados de la conversación
