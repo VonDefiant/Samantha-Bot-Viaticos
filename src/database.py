@@ -130,7 +130,7 @@ class Database:
         try:
             conn = sqlite3.connect(self.db_name)
             c = conn.cursor()
-            c.execute('''SELECT fecha, nit_proveedor, serie, numero, tipo_gasto, monto
+            c.execute('''SELECT fecha, nit_proveedor, nombre_proveedor, serie, numero, tipo_gasto, monto
                          FROM facturas ORDER BY fecha''')
             facturas = c.fetchall()
             conn.close()

@@ -6,7 +6,7 @@ Extrae datos de facturas usando Tesseract OCR
 import re
 import logging
 import pytesseract
-from PIL import Image
+from PIL import Image, ImageEnhance, ImageFilter
 from typing import Dict, Optional
 from .config import OCR_CONFIG, NIT_EMPRESA
 
@@ -27,11 +27,17 @@ def extraer_datos_factura(image_path: str) -> Optional[Dict[str, any]]:
     try:
         logger.info(f"Procesando imagen: {image_path}")
 
-        # Abrir imagen y hacer OCR
+        # Abrir imagen
         img = Image.open(image_path)
-        texto = pytesseract.image_to_string(img, lang=OCR_CONFIG['lang'])
 
-        logger.debug(f"Texto extraído (primeras 200 chars): {texto[:200]}")
+        # Preprocesar imagen para mejor OCR
+        img = _preprocesar_imagen(img)
+
+        # Hacer OCR con configuración mejorada
+        config_ocr = '--psm 6 --oem 3'  # PSM 6: asume bloque uniforme de texto, OEM 3: mejor motor
+        texto = pytesseract.image_to_string(img, lang=OCR_CONFIG['lang'], config=config_ocr)
+
+        logger.debug(f"Texto extraído (primeras 300 chars): {texto[:300]}")
 
         datos = {
             'nit': None,
@@ -68,6 +74,38 @@ def extraer_datos_factura(image_path: str) -> Optional[Dict[str, any]]:
     except Exception as e:
         logger.error(f"Error en OCR: {type(e).__name__} - {str(e)}", exc_info=True)
         return None
+
+
+def _preprocesar_imagen(img: Image) -> Image:
+    """
+    Preprocesar imagen para mejorar resultados de OCR
+
+    Args:
+        img: Imagen PIL a procesar
+
+    Returns:
+        Image: Imagen procesada
+    """
+    try:
+        # Convertir a escala de grises
+        img = img.convert('L')
+
+        # Aumentar contraste
+        enhancer = ImageEnhance.Contrast(img)
+        img = enhancer.enhance(2.0)
+
+        # Aumentar nitidez
+        img = img.filter(ImageFilter.SHARPEN)
+
+        # Aumentar brillo ligeramente
+        enhancer = ImageEnhance.Brightness(img)
+        img = enhancer.enhance(1.2)
+
+        logger.debug("Imagen preprocesada exitosamente")
+        return img
+    except Exception as e:
+        logger.warning(f"Error en preprocesamiento de imagen: {e}. Usando imagen original.")
+        return img
 
 
 def _extraer_nit(lineas: list) -> Optional[str]:
@@ -110,20 +148,39 @@ def _extraer_serie(lineas: list) -> Optional[str]:
     try:
         for i, linea in enumerate(lineas):
             if 'SERIE' in linea.upper():
-                # Buscar código alfanumérico después de SERIE
-                match = re.search(r'SERIE[:\s]*([A-Z0-9]+)', linea.upper())
+                # Buscar código alfanumérico después de SERIE (más flexible)
+                # Acepta series de 6+ caracteres
+                match = re.search(r'SERIE[:\s]*([A-Z0-9]{6,})', linea.upper())
                 if match:
                     serie = match.group(1)
-                    logger.debug(f"Serie encontrada: {serie}")
+                    logger.debug(f"Serie encontrada en misma línea: {serie}")
                     return serie
-                else:
-                    # Buscar en la siguiente línea
-                    if i + 1 < len(lineas):
-                        match = re.search(r'([A-Z0-9]{8,})', lineas[i + 1].upper())
+
+                # Buscar en líneas cercanas (antes y después)
+                for offset in [1, 2, -1]:
+                    idx = i + offset
+                    if 0 <= idx < len(lineas):
+                        # Buscar secuencias alfanuméricas de 6+ caracteres
+                        match = re.search(r'\b([A-Z0-9]{6,})\b', lineas[idx].upper())
                         if match:
                             serie = match.group(1)
-                            logger.debug(f"Serie encontrada (línea siguiente): {serie}")
-                            return serie
+                            # Validar que no sea un NIT (todos números)
+                            if not serie.isdigit():
+                                logger.debug(f"Serie encontrada cerca de SERIE: {serie}")
+                                return serie
+                            elif len(serie) <= 10:  # Series pueden ser numéricas pero cortas
+                                logger.debug(f"Serie numérica encontrada: {serie}")
+                                return serie
+
+        # Si no encontró con SERIE, buscar patrones comunes en facturas guatemaltecas
+        for linea in lineas:
+            # Buscar patrones como "AUTORIZACION NUMERO SERIE" o solo series alfanuméricas
+            match = re.search(r'\b([A-Z]{2,}[0-9]{6,})\b', linea.upper())
+            if match:
+                serie = match.group(1)
+                logger.debug(f"Serie encontrada por patrón: {serie}")
+                return serie
+
     except Exception as e:
         logger.error(f"Error extrayendo serie: {e}")
     return None
@@ -156,31 +213,54 @@ def _extraer_numero(lineas: list) -> Optional[str]:
 def _extraer_monto(lineas: list) -> Optional[float]:
     """Extraer MONTO de la factura"""
     try:
-        # Buscar TOTAL con Q
-        for linea in lineas:
-            if 'TOTAL' in linea.upper() and 'Q' in linea:
-                match = re.search(r'Q\s*[\d,]+\.?\d*', linea)
-                if match:
-                    monto_str = match.group().replace('Q', '').replace(',', '').replace(' ', '')
-                    try:
-                        monto = float(monto_str)
-                        logger.debug(f"Monto encontrado (TOTAL): {monto}")
-                        return monto
-                    except ValueError:
-                        continue
+        montos_encontrados = []
 
-        # Si no encontró monto, buscar cualquier cantidad con Q
+        # Buscar palabras clave de totales (en orden de prioridad)
+        palabras_total = ['GRAN TOTAL', 'TOTAL A PAGAR', 'TOTAL GENERAL', 'TOTAL', 'MONTO']
+
+        for palabra in palabras_total:
+            for i, linea in enumerate(lineas):
+                if palabra in linea.upper():
+                    # Buscar en la misma línea y las 2 siguientes
+                    for j in range(i, min(i + 3, len(lineas))):
+                        # Buscar patrones de monto con Q
+                        # Patrones: Q 123.45, Q123.45, Q 1,234.56, Q1234.56
+                        matches = re.finditer(r'Q\s*[\d,]+\.?\d{0,2}', lineas[j])
+                        for match in matches:
+                            try:
+                                # Limpiar y convertir
+                                monto_str = match.group().replace('Q', '').replace(',', '').replace(' ', '').strip()
+                                if monto_str:
+                                    monto = float(monto_str)
+                                    # Validar que el monto sea razonable (entre 0.01 y 999999)
+                                    if 0.01 <= monto <= 999999:
+                                        montos_encontrados.append((palabra, monto))
+                                        logger.debug(f"Monto encontrado con '{palabra}': Q{monto:.2f}")
+                            except ValueError:
+                                continue
+
+            # Si encontró montos con esta palabra, retornar el más alto
+            if montos_encontrados:
+                monto_final = max(montos_encontrados, key=lambda x: x[1])[1]
+                logger.info(f"Monto seleccionado: Q{monto_final:.2f}")
+                return monto_final
+
+        # Si no encontró con palabras clave, buscar el último monto con Q en el documento
+        # (generalmente el total está al final)
         for linea in reversed(lineas):
-            if 'Q' in linea:
-                match = re.search(r'Q\s*(\d+[\.,]?\d*)', linea)
-                if match:
-                    try:
-                        monto_str = match.group(1).replace(',', '.')
+            matches = re.finditer(r'Q\s*[\d,]+\.?\d{0,2}', linea)
+            for match in matches:
+                try:
+                    monto_str = match.group().replace('Q', '').replace(',', '').replace(' ', '').strip()
+                    if monto_str:
                         monto = float(monto_str)
-                        logger.debug(f"Monto encontrado (genérico): {monto}")
-                        return monto
-                    except ValueError:
-                        continue
+                        if 0.01 <= monto <= 999999:
+                            logger.debug(f"Monto encontrado (último en documento): Q{monto:.2f}")
+                            return monto
+                except ValueError:
+                    continue
+
+        logger.warning("No se pudo extraer monto de la factura")
 
     except Exception as e:
         logger.error(f"Error extrayendo monto: {e}")

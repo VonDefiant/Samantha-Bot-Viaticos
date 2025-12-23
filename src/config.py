@@ -18,7 +18,7 @@ TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 NIT_EMPRESA = os.getenv('NIT_EMPRESA', '71224556')
 
 # ==================== ESTADOS DE CONVERSACIÓN ====================
-TIPO_GASTO, PHOTO, CONFIRMAR, EDITAR_CAMPO, EDITAR_VALOR = range(5)
+TIPO_GASTO, PHOTO, CONFIRMAR, EDITAR_CAMPO, EDITAR_VALOR, BORRAR_ID = range(6)
 
 # ==================== TIPOS DE GASTO ====================
 TIPOS_GASTO = ['ALIMENTACIÓN', 'COMBUSTIBLE']
@@ -44,16 +44,17 @@ OCR_PATTERNS = {
 # ==================== CONFIGURACIÓN DE EXCEL ====================
 EXCEL_CONFIG = {
     'data_start_row': 7,
-    'columns': ['FECHA', 'NIT PROVEEDOR', 'SERIE', 'No. COMPROBANTE', 'TIPO DE GASTO', 'MONTO Q.'],
+    'columns': ['FECHA', 'NIT PROVEEDOR', 'NOMBRE PROVEEDOR', 'SERIE', 'No. COMPROBANTE', 'TIPO DE GASTO', 'MONTO Q.'],
     'column_widths': {
         'A': 8,
         'B': 12,
-        'C': 12,
-        'D': 18,
-        'E': 15,
-        'F': 18,
+        'C': 30,
+        'D': 12,
+        'E': 18,
+        'F': 15,
         'G': 18,
-        'H': 12
+        'H': 18,
+        'I': 12
     }
 }
 
