@@ -9,6 +9,29 @@ echo   Samantha - Bot de Viaticos
 echo ========================================
 echo.
 
+:: Verificar si ya hay instancias de Python corriendo
+tasklist | findstr /I "python.exe" >nul
+if not errorlevel 1 (
+    echo [ADVERTENCIA] Se detectaron procesos de Python en ejecucion
+    echo.
+    echo Esto puede causar conflictos. Deseas cerrarlos? [S/N]
+    choice /C SN /N /M "Presiona S para cerrar o N para continuar: "
+    if errorlevel 2 (
+        echo.
+        echo Continuando con procesos existentes...
+        echo Si hay errores, ejecuta kill_bot.bat primero
+        echo.
+    ) else (
+        echo.
+        echo Cerrando procesos de Python...
+        taskkill /F /IM python.exe >nul 2>&1
+        echo Procesos cerrados.
+        timeout /t 2 >nul
+        echo.
+    )
+)
+echo.
+
 :: Verificar que existe el archivo .env
 if not exist ".env" (
     echo [ERROR] No se encontro el archivo .env
