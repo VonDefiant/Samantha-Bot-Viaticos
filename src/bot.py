@@ -664,6 +664,29 @@ class SamanthaBot:
                 reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
             )
 
+    # ==================== ERROR HANDLER ====================
+
+    async def error_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Manejar errores del bot"""
+        logger.error(f"Error en update {update}: {context.error}", exc_info=context.error)
+
+        # Manejar error de conflicto (múltiples instancias)
+        if "Conflict" in str(context.error):
+            logger.error("⚠️ ERROR: Ya hay otra instancia del bot corriendo")
+            logger.error("Solución: Cierra todas las ventanas de Python y vuelve a ejecutar start.bat")
+            return
+
+        # Si hay un update, intentar notificar al usuario
+        if update and update.effective_message:
+            try:
+                await update.effective_message.reply_text(
+                    "⚠️ Ups! Ocurrió un error inesperado.\n"
+                    "El error ha sido registrado en los logs.\n\n"
+                    "Por favor intenta nuevamente o contacta al administrador."
+                )
+            except Exception:
+                pass
+
     # ==================== SETUP ====================
 
     def setup_handlers(self, app: Application):
@@ -696,23 +719,47 @@ class SamanthaBot:
         # Handler para botones del menú (debe ir al final)
         app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.manejar_menu))
 
+        # Error handler
+        app.add_error_handler(self.error_handler)
+
         logger.info("Handlers configurados correctamente")
 
     def run(self):
         """Ejecutar el bot"""
-        logger.info("=" * 60)
-        logger.info("🤖 Samantha - Bot de Viáticos")
-        logger.info("Iniciando bot...")
-        logger.info("=" * 60)
+        try:
+            logger.info("=" * 60)
+            logger.info("🤖 Samantha - Bot de Viáticos")
+            logger.info("Iniciando bot...")
+            logger.info("=" * 60)
 
-        # Crear aplicación
-        app = Application.builder().token(TELEGRAM_TOKEN).build()
+            # Crear aplicación
+            app = Application.builder().token(TELEGRAM_TOKEN).build()
 
-        # Configurar handlers
-        self.setup_handlers(app)
+            # Configurar handlers
+            self.setup_handlers(app)
 
-        # Iniciar bot
-        logger.info("✨ Bot iniciado correctamente")
-        logger.info("Presiona Ctrl+C para detener")
+            # Iniciar bot
+            logger.info("✨ Bot iniciado correctamente")
+            logger.info("Presiona Ctrl+C para detener")
 
-        app.run_polling()
+            app.run_polling(drop_pending_updates=True)
+
+        except KeyboardInterrupt:
+            logger.info("Bot detenido por el usuario")
+        except Exception as e:
+            if "Conflict" in str(e):
+                logger.error("=" * 60)
+                logger.error("❌ ERROR: Ya hay otra instancia del bot corriendo")
+                logger.error("=" * 60)
+                logger.error("")
+                logger.error("Soluciones:")
+                logger.error("1. Cierra todas las ventanas de Python")
+                logger.error("2. Abre el Administrador de Tareas (Ctrl+Shift+Esc)")
+                logger.error("3. Busca procesos 'python.exe' y ciérralos")
+                logger.error("4. Vuelve a ejecutar start.bat")
+                logger.error("")
+                logger.error("O ejecuta en PowerShell: taskkill /F /IM python.exe")
+                logger.error("=" * 60)
+            else:
+                logger.error(f"Error fatal al iniciar el bot: {e}", exc_info=True)
+            raise
