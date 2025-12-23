@@ -14,7 +14,7 @@ from telegram.ext import (
 
 from .config import (
     TELEGRAM_TOKEN, TIPOS_GASTO, FACTURAS_FOLDER,
-    TIPO_GASTO, PHOTO, CONFIRMAR, EDITAR_CAMPO, EDITAR_VALOR
+    TIPO_GASTO, PHOTO, CONFIRMAR, EDITAR_CAMPO, EDITAR_VALOR, BORRAR_ID
 )
 from .database import Database
 from .ocr import extraer_datos_factura
@@ -227,9 +227,12 @@ class SamanthaBot:
                 mensaje += f"⚠️ No encontré: {', '.join(datos_faltantes)}\n"
                 mensaje += "Pero no te preocupes, puedes agregarlo tú después 😊\n\n"
 
-            mensaje += "¿Todo bien o necesitas editar algo?"
+            mensaje += "¿Todo bien o necesitas hacer algo?"
 
-            keyboard = [['✅ Confirmar', '✏️ Editar'], ['❌ Cancelar']]
+            keyboard = [
+                ['✅ Aceptar', '📸 Reintentar Foto'],
+                ['✏️ Editar', '❌ Cancelar']
+            ]
 
             await update.message.reply_text(
                 mensaje,
@@ -250,6 +253,14 @@ class SamanthaBot:
             if respuesta == '❌ Cancelar':
                 return await self.cancelar(update, context)
 
+            elif respuesta == '📸 Reintentar Foto':
+                await update.message.reply_text(
+                    'Ok! Envíame una nueva foto de la factura 📸\n'
+                    'Intenta que tenga buena iluminación y que el texto se vea claro 💡',
+                    reply_markup=ReplyKeyboardRemove()
+                )
+                return PHOTO
+
             elif respuesta == '✏️ Editar':
                 keyboard = [
                     ['📅 Fecha', '🏢 NIT'],
@@ -264,7 +275,7 @@ class SamanthaBot:
                 )
                 return EDITAR_CAMPO
 
-            elif respuesta == '✅ Confirmar':
+            elif respuesta == '✅ Aceptar':
                 return await self.guardar_factura(update, context)
 
             return CONFIRMAR
@@ -520,7 +531,28 @@ class SamanthaBot:
             await update.message.reply_text("⚠️ Error al obtener lista. Intenta nuevamente.")
 
     async def borrar(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Borrar factura"""
+        """Iniciar proceso de borrar factura"""
+        try:
+            # Botón para cancelar
+            keyboard = [['❌ Cancelar']]
+
+            await update.message.reply_text(
+                'Perfecto! Vamos a borrar una factura 🗑️\n\n'
+                'Escribe el *número de la factura* que quieres eliminar\n\n'
+                '💡 Puedes usar *Ver Lista* primero para ver los números de tus facturas.',
+                parse_mode='Markdown',
+                reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+            )
+            logger.info(f"Usuario {update.effective_user.id} inició proceso de borrado")
+            return BORRAR_ID
+
+        except Exception as e:
+            logger.error(f"Error al iniciar borrado: {e}", exc_info=True)
+            await update.message.reply_text("Error al iniciar. Intenta nuevamente desde el menú.")
+            return ConversationHandler.END
+
+    async def borrar_recibir_id(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Recibir ID de factura a borrar"""
         try:
             # Menú principal
             keyboard = [
@@ -529,21 +561,28 @@ class SamanthaBot:
                 ['🗑️ Borrar Factura', '❓ Ayuda']
             ]
 
-            # Intentar obtener el ID del argumento o del texto del mensaje
-            factura_id = None
-            if context.args:
-                factura_id = int(context.args[0])
-            else:
-                # Si viene del botón "Borrar Factura", pedir el número
+            # Verificar si canceló
+            if update.message.text == '❌ Cancelar':
                 await update.message.reply_text(
-                    'Necesito que me digas qué factura quieres borrar 🤔\n\n'
-                    'Escribe el número de la factura (por ejemplo: 5)\n\n'
-                    'Usa *Ver Lista* para ver los números de tus facturas.',
-                    parse_mode='Markdown',
+                    'Ok! Operación cancelada 👌\n\n'
+                    'No se eliminó ninguna factura.',
                     reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
                 )
-                return
+                return ConversationHandler.END
 
+            # Intentar convertir a número
+            try:
+                factura_id = int(update.message.text.strip())
+            except ValueError:
+                await update.message.reply_text(
+                    'Ese número no es válido 😅\n\n'
+                    'Tiene que ser un número, por ejemplo: 5\n\n'
+                    'Inténtalo de nuevo o presiona *Cancelar*:',
+                    parse_mode='Markdown'
+                )
+                return BORRAR_ID
+
+            # Intentar eliminar
             eliminada = self.db.eliminar_factura(factura_id)
 
             if eliminada:
@@ -551,7 +590,7 @@ class SamanthaBot:
                     f'Listo! ✅ La factura #{factura_id} ya está eliminada.',
                     reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
                 )
-                logger.info(f"Factura #{factura_id} eliminada")
+                logger.info(f"Factura #{factura_id} eliminada exitosamente")
             else:
                 await update.message.reply_text(
                     f'Mmm... 🤔 No encontré ninguna factura con el número #{factura_id}\n\n'
@@ -560,15 +599,15 @@ class SamanthaBot:
                     reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
                 )
 
-        except ValueError:
-            await update.message.reply_text(
-                'Ese número no es válido 😅\n\n'
-                'Tiene que ser un número, por ejemplo: 5',
-                reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-            )
+            return ConversationHandler.END
+
         except Exception as e:
             logger.error(f"Error al borrar factura: {e}", exc_info=True)
-            await update.message.reply_text("⚠️ Error al eliminar factura. Intenta nuevamente.")
+            await update.message.reply_text(
+                "⚠️ Error al eliminar factura. Intenta nuevamente desde el menú.",
+                reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+            )
+            return ConversationHandler.END
 
     # ==================== EXPORTAR ====================
 
@@ -635,16 +674,13 @@ class SamanthaBot:
         texto = update.message.text
 
         # Mapeo de botones a comandos
-        if texto == '📝 Nueva Factura':
-            return await self.nueva_factura(update, context)
-        elif texto == '📊 Resumen':
+        # Nota: "Nueva Factura" y "Borrar Factura" son manejados por ConversationHandlers
+        if texto == '📊 Resumen':
             return await self.resumen(update, context)
         elif texto == '📋 Ver Lista':
             return await self.lista(update, context)
         elif texto == '📥 Exportar Excel':
             return await self.exportar(update, context)
-        elif texto == '🗑️ Borrar Factura':
-            return await self.borrar(update, context)
         elif texto == '❓ Ayuda' or texto == '🏠 Menú Principal':
             # Si es ayuda o volver al menú, mostrar start
             if texto == '🏠 Menú Principal':
@@ -692,7 +728,7 @@ class SamanthaBot:
     def setup_handlers(self, app: Application):
         """Configurar handlers del bot"""
         # ConversationHandler para nueva factura
-        conv_handler = ConversationHandler(
+        conv_handler_nueva = ConversationHandler(
             entry_points=[
                 CommandHandler('nueva', self.nueva_factura),
                 MessageHandler(filters.Regex('^📝 Nueva Factura$'), self.nueva_factura)
@@ -707,13 +743,25 @@ class SamanthaBot:
             fallbacks=[CommandHandler('cancelar', self.cancelar)]
         )
 
+        # ConversationHandler para borrar factura
+        conv_handler_borrar = ConversationHandler(
+            entry_points=[
+                CommandHandler('borrar', self.borrar),
+                MessageHandler(filters.Regex('^🗑️ Borrar Factura$'), self.borrar)
+            ],
+            states={
+                BORRAR_ID: [MessageHandler(filters.TEXT & ~filters.COMMAND, self.borrar_recibir_id)]
+            },
+            fallbacks=[CommandHandler('cancelar', self.cancelar)]
+        )
+
         # Agregar handlers de comandos y botones
         app.add_handler(CommandHandler('start', self.start))
         app.add_handler(CommandHandler('help', self.help_command))
-        app.add_handler(conv_handler)
+        app.add_handler(conv_handler_nueva)
+        app.add_handler(conv_handler_borrar)
         app.add_handler(CommandHandler('resumen', self.resumen))
         app.add_handler(CommandHandler('lista', self.lista))
-        app.add_handler(CommandHandler('borrar', self.borrar))
         app.add_handler(CommandHandler('exportar', self.exportar))
 
         # Handler para botones del menú (debe ir al final)
