@@ -102,6 +102,18 @@ class Database:
             logger.error(f"Error al registrar usuario: {e}")
             return False
 
+    def usuario_existe(self, user_id: int) -> bool:
+        try:
+            conn = sqlite3.connect(self.db_name)
+            c = conn.cursor()
+            c.execute('SELECT user_id FROM usuarios WHERE user_id = ?', (user_id,))
+            existe = c.fetchone() is not None
+            conn.close()
+            return existe
+        except Exception as e:
+            logger.error(f"Error al verificar usuario: {e}")
+            return False
+
     def obtener_usuario(self, user_id: int) -> Optional[Tuple]:
         try:
             conn = sqlite3.connect(self.db_name)
