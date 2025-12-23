@@ -114,3 +114,30 @@ def formatear_error(error: Exception) -> str:
     error_msg = str(error)
 
     return f"⚠️ Error: {error_type}\n{error_msg}"
+
+
+MESES_NOMBRES = {
+    1: 'Enero', 2: 'Febrero', 3: 'Marzo', 4: 'Abril',
+    5: 'Mayo', 6: 'Junio', 7: 'Julio', 8: 'Agosto',
+    9: 'Septiembre', 10: 'Octubre', 11: 'Noviembre', 12: 'Diciembre'
+}
+
+
+def obtener_nombre_mes(mes: int) -> str:
+    """Retorna el nombre del mes"""
+    return MESES_NOMBRES.get(mes, str(mes))
+
+
+def obtener_mes_actual() -> int:
+    """Retorna el mes actual"""
+    return datetime.now().month
+
+
+def obtener_anio_actual() -> int:
+    """Retorna el año actual"""
+    return datetime.now().year
+
+
+def formatear_periodo(mes: int, anio: int) -> str:
+    """Formatea un periodo como 'Enero 2024'"""
+    return f"{obtener_nombre_mes(mes)} {anio}"
