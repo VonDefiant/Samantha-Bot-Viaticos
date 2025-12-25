@@ -17,6 +17,7 @@ class Database:
         self.db_name = db_name
         self.init_db()
         self._migrate_if_needed()
+        self._create_indexes()
 
     def init_db(self):
         try:
@@ -44,12 +45,9 @@ class Database:
                           created_at TEXT,
                           FOREIGN KEY (user_id) REFERENCES usuarios (user_id))''')
 
-            c.execute('CREATE INDEX IF NOT EXISTS idx_facturas_user ON facturas(user_id)')
-            c.execute('CREATE INDEX IF NOT EXISTS idx_facturas_fecha ON facturas(fecha)')
-
             conn.commit()
             conn.close()
-            logger.info("Base de datos inicializada correctamente")
+            logger.info("Tablas de base de datos inicializadas correctamente")
         except Exception as e:
             logger.error(f"Error al inicializar base de datos: {e}")
             raise
@@ -80,6 +78,21 @@ class Database:
             conn.close()
         except Exception as e:
             logger.error(f"Error en migración: {e}")
+
+    def _create_indexes(self):
+        """Crea los índices después de asegurar que las columnas existan"""
+        try:
+            conn = sqlite3.connect(self.db_name)
+            c = conn.cursor()
+
+            c.execute('CREATE INDEX IF NOT EXISTS idx_facturas_user ON facturas(user_id)')
+            c.execute('CREATE INDEX IF NOT EXISTS idx_facturas_fecha ON facturas(fecha)')
+
+            conn.commit()
+            conn.close()
+            logger.info("Índices de base de datos creados correctamente")
+        except Exception as e:
+            logger.error(f"Error al crear índices: {e}")
 
     def registrar_usuario(self, user_id: int, nombre: str, telefono: str = None) -> bool:
         try:
