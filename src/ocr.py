@@ -23,33 +23,48 @@ def extraer_datos_factura(image_path: str) -> Optional[Dict[str, any]]:
 
         img = Image.open(image_path)
 
+        # Intentar con múltiples estrategias de preprocesamiento
         texto_completo = []
         configs = [
-            '--psm 6 --oem 3',
-            '--psm 4 --oem 3',
-            '--psm 3 --oem 3'
+            ('basico', '--psm 6 --oem 3'),
+            ('basico', '--psm 4 --oem 3'),
+            ('avanzado', '--psm 6 --oem 3'),
+            ('original', '--psm 6 --oem 3'),  # Sin preprocesamiento
         ]
 
-        for config in configs:
-            img_procesada = _preprocesar_imagen_avanzado(img.copy())
+        for tipo, config in configs:
+            if tipo == 'avanzado':
+                img_procesada = _preprocesar_imagen_avanzado(img.copy())
+            elif tipo == 'basico':
+                img_procesada = _preprocesar_imagen_basico(img.copy())
+            else:
+                # Imagen original sin preprocesamiento
+                img_procesada = img.copy()
+
             texto = pytesseract.image_to_string(img_procesada, lang=OCR_CONFIG['lang'], config=config)
             texto_completo.append(texto)
+            logger.debug(f"Texto extraído con {tipo}/{config}: {len(texto)} caracteres")
 
+        # Combinar todos los textos para maximizar extracción
+        texto_combinado = '\n'.join(texto_completo)
         texto_final = max(texto_completo, key=len)
-        logger.debug(f"Texto extraido (primeras 300 chars): {texto_final[:300]}")
+
+        logger.debug(f"Texto final (primeras 500 chars):\n{texto_final[:500]}")
 
         lineas = texto_final.split('\n')
+        lineas_combinadas = texto_combinado.split('\n')
         texto_limpio = _limpiar_texto(texto_final)
 
+        # Intentar extracción con todos los textos disponibles
         datos = {
-            'nit': _extraer_nit_mejorado(lineas, texto_limpio),
-            'nombre': _extraer_nombre_mejorado(lineas, texto_limpio),
-            'serie': _extraer_serie_mejorado(lineas, texto_limpio),
-            'numero': _extraer_numero_mejorado(lineas, texto_limpio),
-            'monto': _extraer_monto_mejorado(lineas, texto_limpio)
+            'nit': _extraer_nit_mejorado(lineas_combinadas, texto_combinado),
+            'nombre': _extraer_nombre_mejorado(lineas_combinadas, texto_combinado),
+            'serie': _extraer_serie_mejorado(lineas_combinadas, texto_combinado),
+            'numero': _extraer_numero_mejorado(lineas_combinadas, texto_combinado),
+            'monto': _extraer_monto_mejorado(lineas_combinadas, texto_combinado)
         }
 
-        logger.info(f"Datos extraidos: NIT={datos['nit']}, Serie={datos['serie']}, Numero={datos['numero']}, Monto={datos['monto']}")
+        logger.info(f"Datos extraídos: NIT={datos['nit']}, Nombre={datos['nombre'][:30] if datos['nombre'] else None}, Serie={datos['serie']}, Numero={datos['numero']}, Monto={datos['monto']}")
 
         return datos
 
@@ -129,29 +144,43 @@ def _extraer_nit_mejorado(lineas: List[str], texto_completo: str) -> Optional[st
     Extracción mejorada de NIT con múltiples estrategias
     """
     try:
+        # Patrones más flexibles para NIT
         patrones_nit = [
-            r'NIT[:\s]*(\d{6,12})',
-            r'N\.?I\.?T\.?[:\s]*(\d{6,12})',
-            r'TRIBUTARIO[:\s]*(\d{6,12})',
-            r'REGISTRO[:\s]+TRIBUTARIO[:\s]*(\d{6,12})'
+            r'NIT[:\s-]*(\d{6,12})',
+            r'N\.?\s*I\.?\s*T\.?[:\s-]*(\d{6,12})',
+            r'TRIBUTARIO[:\s-]*(\d{6,12})',
+            r'REGISTRO[:\s]+TRIBUTARIO[:\s-]*(\d{6,12})',
+            r'(?:^|\n)NIT[:\s]*(\d{6,12})',
+            # Buscar después de palabras clave
+            r'(?:COMPRADOR|CLIENTE)[^\d]*NIT[:\s]*(\d{6,12})',
         ]
 
         for patron in patrones_nit:
-            match = re.search(patron, texto_completo.upper())
-            if match:
+            matches = re.finditer(patron, texto_completo.upper(), re.MULTILINE)
+            for match in matches:
                 nit = match.group(1)
                 if nit != NIT_EMPRESA and len(nit) >= 6:
-                    logger.debug(f"NIT encontrado con patron: {nit}")
+                    logger.debug(f"NIT encontrado con patrón '{patron}': {nit}")
                     return nit
 
+        # Buscar en líneas cercanas a la palabra NIT
         for i, linea in enumerate(lineas):
             if re.search(r'\bNIT\b', linea.upper()):
-                for j in range(i, min(i+4, len(lineas))):
+                # Buscar en línea actual y siguientes
+                for j in range(i, min(i+5, len(lineas))):
+                    # Buscar números de 6-12 dígitos
                     numeros = re.findall(r'\b(\d{6,12})\b', lineas[j])
                     for num in numeros:
-                        if num != NIT_EMPRESA:
-                            logger.debug(f"NIT encontrado en lineas cercanas: {num}")
+                        if num != NIT_EMPRESA and len(num) >= 6:
+                            logger.debug(f"NIT encontrado en líneas cercanas a índice {i}: {num}")
                             return num
+
+        # Último intento: buscar cualquier número de 7-9 dígitos (NITs típicos de Guatemala)
+        numeros_candidatos = re.findall(r'\b(\d{7,9})\b', texto_completo)
+        for num in numeros_candidatos:
+            if num != NIT_EMPRESA:
+                logger.debug(f"NIT candidato (número de 7-9 dígitos): {num}")
+                return num
 
         logger.warning("No se pudo extraer NIT")
         return None
@@ -241,37 +270,53 @@ def _extraer_numero_mejorado(lineas: List[str], texto_completo: str) -> Optional
     Extracción mejorada de número de factura
     """
     try:
+        # Patrones más flexibles para número
         patrones_numero = [
-            r'N[UÚ]MERO[:\s]*(\d{6,12})',
-            r'NUMERO[:\s]*(\d{6,12})',
-            r'N[UÚ]M[:\s]*(\d{6,12})',
-            r'NUM[:\s]*(\d{6,12})',
-            r'DOCUMENTO[:\s]*(\d{6,12})',
-            r'CORRELATIVO[:\s]*(\d{6,12})'
+            r'N[UÚ]MERO[:\s-]*(\d{6,12})',
+            r'NUMERO[:\s-]*(\d{6,12})',
+            r'N[UÚ]M\.?[:\s-]*(\d{6,12})',
+            r'NUM\.?[:\s-]*(\d{6,12})',
+            r'DOCUMENTO[:\s-]*(\d{6,12})',
+            r'CORRELATIVO[:\s-]*(\d{6,12})',
+            r'NO\.[:\s]*(\d{6,12})',
+            r'#[:\s]*(\d{6,12})',
         ]
 
         for patron in patrones_numero:
-            match = re.search(patron, texto_completo.upper())
-            if match:
+            matches = re.finditer(patron, texto_completo.upper(), re.MULTILINE)
+            for match in matches:
                 numero = match.group(1)
-                logger.debug(f"Numero encontrado con patron: {numero}")
+                logger.debug(f"Número encontrado con patrón '{patron}': {numero}")
                 return numero
 
+        # Buscar en líneas cercanas a NÚMERO
         for i, linea in enumerate(lineas):
-            if re.search(r'\bN[UÚ]MERO\b|\bNUMERO\b', linea.upper()):
-                for offset in [0, 1, 2]:
+            if re.search(r'\b(?:N[UÚ]MERO|NUMERO|NUM|NO\.)\b', linea.upper()):
+                for offset in [0, 1, 2, 3]:
                     idx = i + offset
                     if idx < len(lineas):
                         numeros = re.findall(r'\b(\d{6,12})\b', lineas[idx])
                         if numeros:
-                            logger.debug(f"Numero encontrado en lineas: {numeros[0]}")
+                            logger.debug(f"Número encontrado en líneas cercanas: {numeros[0]}")
                             return numeros[0]
 
-        logger.warning("No se pudo extraer numero de factura")
+        # Buscar después de SERIE (el número suele venir después de la serie)
+        for i, linea in enumerate(lineas):
+            if re.search(r'\bSERIE\b', linea.upper()):
+                for offset in [1, 2, 3]:
+                    idx = i + offset
+                    if idx < len(lineas):
+                        # Buscar números largos (8+ dígitos que no sean NITs)
+                        numeros = re.findall(r'\b(\d{8,12})\b', lineas[idx])
+                        if numeros:
+                            logger.debug(f"Número encontrado después de SERIE: {numeros[0]}")
+                            return numeros[0]
+
+        logger.warning("No se pudo extraer número de factura")
         return None
 
     except Exception as e:
-        logger.error(f"Error extrayendo numero: {e}")
+        logger.error(f"Error extrayendo número: {e}")
         return None
 
 
@@ -282,47 +327,69 @@ def _extraer_monto_mejorado(lineas: List[str], texto_completo: str) -> Optional[
     try:
         montos_candidatos = []
 
+        # Palabras clave ordenadas por prioridad (más específicas primero)
         palabras_clave = [
-            'GRAN TOTAL', 'TOTAL A PAGAR', 'TOTAL GENERAL',
-            'TOTAL FACTURA', 'MONTO TOTAL', 'TOTAL',
-            'IMPORTE TOTAL', 'SUMA TOTAL', 'VALOR TOTAL'
+            ('GRAN TOTAL', 10),
+            ('TOTAL A PAGAR', 10),
+            ('TOTAL GENERAL', 9),
+            ('TOTAL FACTURA', 9),
+            ('MONTO TOTAL', 8),
+            ('SUMA TOTAL', 8),
+            ('VALOR TOTAL', 7),
+            ('TOTAL', 5),  # Menos prioridad porque es genérico
         ]
 
-        for palabra in palabras_clave:
-            patron = rf'{palabra}[:\s]*Q?\s*([\d,]+\.?\d{{0,2}})'
-            matches = re.finditer(patron, texto_completo.upper())
-            for match in matches:
-                try:
-                    monto_str = match.group(1).replace(',', '')
-                    monto = float(monto_str)
-                    if 0.01 <= monto <= 999999:
-                        montos_candidatos.append((palabra, monto))
-                        logger.debug(f"Monto candidato con '{palabra}': {monto:.2f}")
-                except ValueError:
-                    continue
+        for palabra, prioridad in palabras_clave:
+            # Patrones más flexibles para montos
+            patrones = [
+                rf'{palabra}[:\s]*Q\s*([\d,]+\.?\d{{0,2}})',
+                rf'{palabra}[:\s]*([\d,]+\.?\d{{0,2}})',
+                rf'{palabra}[^\d]{{0,10}}Q\s*([\d,]+\.?\d{{0,2}})',
+            ]
 
+            for patron in patrones:
+                matches = re.finditer(patron, texto_completo.upper())
+                for match in matches:
+                    try:
+                        monto_str = match.group(1).replace(',', '').replace(' ', '')
+                        monto = float(monto_str)
+                        if 0.01 <= monto <= 999999:
+                            montos_candidatos.append((palabra, monto, prioridad))
+                            logger.debug(f"Monto candidato con '{palabra}' (prioridad {prioridad}): Q{monto:.2f}")
+                    except ValueError:
+                        continue
+
+        # Seleccionar monto con mayor prioridad, y si hay empate, el mayor monto
         if montos_candidatos:
-            monto_final = max(montos_candidatos, key=lambda x: x[1])[1]
-            logger.info(f"Monto seleccionado: {monto_final:.2f}")
+            monto_final = max(montos_candidatos, key=lambda x: (x[2], x[1]))[1]
+            logger.info(f"Monto seleccionado: Q{monto_final:.2f}")
             return monto_final
 
+        # Patrones generales de monto (Q, GTQ, QUETZALES)
         patrones_monto = [
             r'Q\s*([\d,]+\.?\d{0,2})',
             r'GTQ\s*([\d,]+\.?\d{0,2})',
-            r'QUETZALES\s*([\d,]+\.?\d{0,2})'
+            r'QUETZALES\s*([\d,]+\.?\d{0,2})',
+            r'\$\s*([\d,]+\.?\d{0,2})',  # Por si usan $ en lugar de Q
         ]
 
+        todos_montos = []
         for patron in patrones_monto:
-            matches = list(re.finditer(patron, texto_completo))
-            for match in reversed(matches):
+            matches = re.finditer(patron, texto_completo)
+            for match in matches:
                 try:
-                    monto_str = match.group(1).replace(',', '')
+                    monto_str = match.group(1).replace(',', '').replace(' ', '')
                     monto = float(monto_str)
                     if 0.01 <= monto <= 999999:
-                        logger.debug(f"Monto encontrado: {monto:.2f}")
-                        return monto
+                        todos_montos.append(monto)
                 except ValueError:
                     continue
+
+        # Tomar el monto más grande (suele ser el total)
+        if todos_montos:
+            monto_final = max(todos_montos)
+            logger.debug(f"Monto encontrado (máximo de todos): Q{monto_final:.2f}")
+            return monto_final
 
         logger.warning("No se pudo extraer monto")
         return None
