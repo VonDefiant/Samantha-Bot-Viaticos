@@ -152,8 +152,8 @@ def _extraer_nit_mejorado(lineas: List[str], texto_completo: str) -> Optional[st
         texto_upper = texto_completo.upper()
 
         # Palabras clave para identificar cada tipo de NIT
-        palabras_emisor = ['EMISOR', 'NIT EMISOR', 'PROVEEDOR', 'VENDEDOR', 'RAZON SOCIAL', 'CONTRIBUYENTE']
-        palabras_certificador = ['CERTIFICADOR', 'DATOS DEL CERTIFICADOR', 'DATOS CERTIFICADOR', 'DIGIFACT', 'INFILE', 'GUATEFACTURAS']
+        palabras_emisor = ['EMISOR', 'NIT EMISOR', 'DATOS DEL EMISOR', 'PROVEEDOR', 'VENDEDOR', 'RAZON SOCIAL', 'CONTRIBUYENTE']
+        palabras_certificador = ['CERTIFICADOR', 'DATOS DEL CERTIFICADOR', 'DATOS CERTIFICADOR', 'DIGIFACT', 'INFILE', 'GUATEFACTURAS', 'AIINOVA', 'MEGAPRINT']
         palabras_comprador = ['COMPRADOR', 'CLIENTE', 'ADQUIRENTE', 'DATOS DEL COMPRADOR', 'DATOS COMPRADOR', 'DATOS CLIENTE']
 
         # ESTRATEGIA 1: Buscar "NIT EMISOR" explícitamente (facturas digitales)
@@ -176,9 +176,14 @@ def _extraer_nit_mejorado(lineas: List[str], texto_completo: str) -> Optional[st
             contexto_despues = match.group(3)
             contexto_completo = contexto_antes + contexto_despues
 
-            # Excluir NIT_EMPRESA
-            if nit == NIT_EMPRESA:
-                logger.debug(f"NIT {nit} excluido (es NIT_EMPRESA)")
+            # Excluir NIT_EMPRESA (comparar sin guiones ni dígitos verificadores)
+            # En Guatemala el formato es XXXXXXX-X, comparamos solo la parte principal
+            nit_sin_guion = nit.replace('-', '').replace(' ', '')
+            nit_empresa_sin_guion = NIT_EMPRESA.replace('-', '').replace(' ', '')
+
+            # Comparar los primeros 7-8 dígitos (sin el verificador)
+            if nit_sin_guion[:8] == nit_empresa_sin_guion[:8] or nit_sin_guion == nit_empresa_sin_guion:
+                logger.debug(f"NIT {nit} excluido (es NIT_EMPRESA: {NIT_EMPRESA})")
                 continue
 
             # Calcular prioridad basada en contexto
@@ -252,14 +257,20 @@ def _extraer_nit_mejorado(lineas: List[str], texto_completo: str) -> Optional[st
         if matches:
             # Tomar el primer NIT (suele ser del emisor)
             primer_nit = matches[0].group(1)
-            if primer_nit != NIT_EMPRESA:
+            primer_nit_sin_guion = primer_nit.replace('-', '').replace(' ', '')
+            nit_empresa_sin_guion = NIT_EMPRESA.replace('-', '').replace(' ', '')
+
+            if primer_nit_sin_guion[:8] != nit_empresa_sin_guion[:8] and primer_nit_sin_guion != nit_empresa_sin_guion:
                 logger.info(f"NIT encontrado por posición (antes de certificador/comprador): {primer_nit}")
                 return primer_nit
 
         # ESTRATEGIA 4: Buscar cualquier número de 7-10 dígitos al inicio
         numeros = re.findall(r'\b(\d{7,10})\b', texto_emisor[:1000])
+        nit_empresa_sin_guion = NIT_EMPRESA.replace('-', '').replace(' ', '')
+
         for num in numeros:
-            if num != NIT_EMPRESA:
+            num_sin_guion = num.replace('-', '').replace(' ', '')
+            if num_sin_guion[:8] != nit_empresa_sin_guion[:8] and num_sin_guion != nit_empresa_sin_guion:
                 logger.debug(f"NIT candidato (número inicial): {num}")
                 return num
 
