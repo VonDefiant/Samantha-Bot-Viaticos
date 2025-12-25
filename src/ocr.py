@@ -142,95 +142,84 @@ def _limpiar_texto(texto: str) -> str:
 def _extraer_nit_mejorado(lineas: List[str], texto_completo: str) -> Optional[str]:
     """
     Extracción mejorada de NIT del PROVEEDOR (excluyendo NIT del comprador/empresa)
+
+    Estrategia: Buscar ANTES de la sección "DATOS DEL COMPRADOR"
+    El NIT del proveedor siempre aparece PRIMERO en la factura
     """
     try:
-        # Dividir texto para identificar secciones
         texto_upper = texto_completo.upper()
 
-        # Primero: buscar explícitamente en sección del proveedor/vendedor
-        # Evitar sección "DATOS DEL COMPRADOR" o similar
-        secciones_comprador = ['DATOS DEL COMPRADOR', 'COMPRADOR', 'CLIENTE', 'ADQUIRENTE']
+        # Dividir el texto en dos partes: ANTES y DESPUÉS de "DATOS DEL COMPRADOR"
+        # Solo buscar en la parte ANTES
+        marcadores_comprador = [
+            'DATOS DEL COMPRADOR',
+            'DATOS COMPRADOR',
+            'DATA COMPRADOR',
+            'ADQUIRENTE',
+            'DATOS CLIENTE'
+        ]
 
-        # Encontrar todos los NITs con contexto
-        nits_encontrados = []
+        # Encontrar dónde empieza la sección del comprador
+        posicion_comprador = len(texto_upper)  # Por defecto, al final
+        for marcador in marcadores_comprador:
+            pos = texto_upper.find(marcador)
+            if pos != -1 and pos < posicion_comprador:
+                posicion_comprador = pos
+                logger.debug(f"Sección comprador encontrada en posición {pos} con marcador '{marcador}'")
 
-        # Patrón para encontrar NITs con su contexto
-        patron_nit_contexto = r'(.{0,100})NIT[:\s-]*(\d{6,12})(.{0,100})'
-        matches = re.finditer(patron_nit_contexto, texto_upper, re.MULTILINE)
+        # Extraer solo la parte ANTES de la sección del comprador
+        texto_proveedor = texto_upper[:posicion_comprador]
+        logger.debug(f"Texto del proveedor (primeros 300 chars): {texto_proveedor[:300]}")
 
-        for match in matches:
-            contexto_antes = match.group(1)
-            nit = match.group(2)
-            contexto_despues = match.group(3)
-            contexto_completo = contexto_antes + contexto_despues
+        # Buscar NITs SOLO en la sección del proveedor
+        patron_nit = r'NIT[:\s-]*(\d{6,12})'
+        matches = list(re.finditer(patron_nit, texto_proveedor))
 
-            # Verificar que NO sea el NIT de nuestra empresa
-            if nit == NIT_EMPRESA:
-                logger.debug(f"NIT {nit} excluido (es NIT_EMPRESA)")
-                continue
+        if matches:
+            # Tomar el PRIMER NIT encontrado (es del proveedor)
+            primer_nit = matches[0].group(1)
 
-            # Verificar que NO esté en sección de comprador
-            es_seccion_comprador = any(seccion in contexto_completo for seccion in secciones_comprador)
+            # Verificar que no sea el NIT_EMPRESA (por si acaso)
+            if primer_nit != NIT_EMPRESA:
+                logger.info(f"NIT del proveedor encontrado: {primer_nit}")
+                return primer_nit
 
-            if not es_seccion_comprador:
-                # Este NIT probablemente es del proveedor
-                prioridad = 10
+            # Si el primero es NIT_EMPRESA, tomar el segundo
+            if len(matches) > 1:
+                segundo_nit = matches[1].group(1)
+                if segundo_nit != NIT_EMPRESA:
+                    logger.info(f"NIT del proveedor (segundo intento): {segundo_nit}")
+                    return segundo_nit
 
-                # Dar mayor prioridad si está cerca de palabras clave de proveedor
-                if any(palabra in contexto_completo for palabra in ['PROVEEDOR', 'VENDEDOR', 'EMISOR', 'RAZON SOCIAL']):
-                    prioridad = 20
+        # Plan B: Buscar números de 7-9 dígitos en la sección del proveedor
+        # (NITs típicos de Guatemala, excluyendo NIT_EMPRESA)
+        numeros = re.findall(r'\b(\d{7,9})\b', texto_proveedor)
+        for num in numeros:
+            if num != NIT_EMPRESA:
+                # Verificar que esté cerca de la palabra "NIT" o al inicio
+                if 'NIT' in texto_proveedor or texto_proveedor.find(num) < 500:
+                    logger.debug(f"NIT candidato (7-9 dígitos): {num}")
+                    return num
 
-                nits_encontrados.append((nit, prioridad))
-                logger.debug(f"NIT candidato: {nit} (prioridad {prioridad}, contexto: {contexto_completo[:50]}...)")
-
-        # Ordenar por prioridad y tomar el mejor
-        if nits_encontrados:
-            nits_encontrados.sort(key=lambda x: x[1], reverse=True)
-            nit_seleccionado = nits_encontrados[0][0]
-            logger.info(f"NIT del proveedor seleccionado: {nit_seleccionado}")
-            return nit_seleccionado
-
-        # Plan B: Buscar el PRIMER NIT que aparezca y que NO sea NIT_EMPRESA
-        # (usualmente el NIT del proveedor aparece primero en la factura)
-        patron_simple = r'\bNIT[:\s-]*(\d{6,12})'
-        matches = re.finditer(patron_simple, texto_upper)
-        for match in matches:
-            nit = match.group(1)
-            if nit != NIT_EMPRESA:
-                # Verificar que no esté en línea con "COMPRADOR"
-                inicio_match = match.start()
-                fin_match = match.end()
-                contexto = texto_upper[max(0, inicio_match-100):min(len(texto_upper), fin_match+100)]
-
-                if not any(palabra in contexto for palabra in secciones_comprador):
-                    logger.debug(f"NIT encontrado (primer NIT válido): {nit}")
-                    return nit
-
-        # Plan C: Buscar en líneas que NO contengan palabras de comprador
-        for i, linea in enumerate(lineas):
+        # Plan C: Buscar en líneas iniciales (primeras 30 líneas)
+        # El NIT del proveedor siempre está al inicio
+        lineas_iniciales = lineas[:30]
+        for i, linea in enumerate(lineas_iniciales):
             linea_upper = linea.upper()
 
-            # Saltar líneas de sección comprador
-            if any(palabra in linea_upper for palabra in secciones_comprador):
-                continue
+            # Detenerse si llegamos a sección comprador
+            if any(marcador in linea_upper for marcador in marcadores_comprador):
+                logger.debug(f"Llegamos a sección comprador en línea {i}, deteniendo búsqueda")
+                break
 
-            if re.search(r'\bNIT\b', linea_upper):
-                for j in range(i, min(i+5, len(lineas))):
-                    if any(palabra in lineas[j].upper() for palabra in secciones_comprador):
-                        break  # Saltar si llegamos a sección comprador
-
-                    numeros = re.findall(r'\b(\d{6,12})\b', lineas[j])
+            if 'NIT' in linea_upper:
+                # Buscar números en esta línea y las siguientes 3
+                for j in range(i, min(i+4, len(lineas_iniciales))):
+                    numeros = re.findall(r'\b(\d{6,12})\b', lineas_iniciales[j])
                     for num in numeros:
                         if num != NIT_EMPRESA and len(num) >= 6:
-                            logger.debug(f"NIT encontrado en líneas (no comprador): {num}")
+                            logger.debug(f"NIT encontrado en líneas iniciales: {num}")
                             return num
-
-        # Último recurso: tomar cualquier NIT de 7-9 dígitos que NO sea NIT_EMPRESA
-        numeros_candidatos = re.findall(r'\b(\d{7,9})\b', texto_completo)
-        for num in numeros_candidatos:
-            if num != NIT_EMPRESA:
-                logger.debug(f"NIT candidato (último recurso): {num}")
-                return num
 
         logger.warning("No se pudo extraer NIT del proveedor")
         return None
