@@ -139,6 +139,32 @@ class Database:
             logger.error(f"Error al obtener usuario: {e}")
             return None
 
+    def obtener_nombre_usuario(self, user_id: int) -> Optional[str]:
+        """Obtiene solo el nombre del usuario"""
+        try:
+            conn = sqlite3.connect(self.db_name)
+            c = conn.cursor()
+            c.execute('SELECT nombre FROM usuarios WHERE user_id = ?', (user_id,))
+            result = c.fetchone()
+            conn.close()
+            return result[0] if result else None
+        except Exception as e:
+            logger.error(f"Error al obtener nombre de usuario: {e}")
+            return None
+
+    def contar_facturas_usuario(self, user_id: int) -> int:
+        """Cuenta el total de facturas de un usuario"""
+        try:
+            conn = sqlite3.connect(self.db_name)
+            c = conn.cursor()
+            c.execute('SELECT COUNT(*) FROM facturas WHERE user_id = ?', (user_id,))
+            count = c.fetchone()[0]
+            conn.close()
+            return count or 0
+        except Exception as e:
+            logger.error(f"Error al contar facturas: {e}")
+            return 0
+
     def actualizar_nombre_usuario(self, user_id: int, nuevo_nombre: str) -> bool:
         try:
             conn = sqlite3.connect(self.db_name)
